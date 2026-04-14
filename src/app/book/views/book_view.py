@@ -11,14 +11,12 @@ from app.book.serializers.book_serializer import (
 from app.book.services.book_service import BookService
 
 
-class BookListView(APIView):
-    """
-    書本列表 View。
+class BookView(APIView):
 
-    GET  /books/  → 取得所有書本
-    POST /books/  → 新增一本書
-    """
-
+    def _get_book_or_400(self, book_id: int):
+        """共用的取書邏輯，找不到時由 Service 層拋出 ValidationError（400）。"""
+        return BookService.get_book_by_id(book_id)
+        
     def get(self, request: Request) -> Response:
         # ── 1. 呼叫 Service 層取得資料 ──
         books = BookService.get_all_books()
@@ -41,20 +39,6 @@ class BookListView(APIView):
 
         # ── 4. 用唯讀的 BookSerializer 回傳完整資料（含 id、created_at） ──
         return Response(BookSerializer(book).data, status=status.HTTP_201_CREATED)
-
-
-class BookDetailView(APIView):
-    """
-    書本詳情 View。
-
-    GET    /books/<id>/  → 取得單本書
-    PUT    /books/<id>/  → 更新書本（全欄位更新）
-    DELETE /books/<id>/  → 刪除書本
-    """
-
-    def _get_book_or_400(self, book_id: int):
-        """共用的取書邏輯，找不到時由 Service 層拋出 ValidationError（400）。"""
-        return BookService.get_book_by_id(book_id)
 
     def get(self, request: Request, book_id: int) -> Response:
         # ── 1. 呼叫 Service 層取得單筆資料 ──

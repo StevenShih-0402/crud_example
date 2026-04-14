@@ -10,7 +10,6 @@ class Book(models.Model):
     writer = models.CharField(max_length=30, verbose_name="作者")
     publish_date = models.DateField(verbose_name="出版日期")
 
-    # 由 Serializer 的 create() / update() 手動寫入，藉此示範業務邏輯層的職責。
     created_at = models.DateTimeField(null=True, blank=True, verbose_name="建立時間")
     updated_at = models.DateTimeField(null=True, blank=True, verbose_name="修改時間")
 
