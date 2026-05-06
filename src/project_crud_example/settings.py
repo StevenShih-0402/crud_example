@@ -38,7 +38,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'app.book',
+    'app.user',
 ]
 
 MIDDLEWARE = [
@@ -117,3 +120,26 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# 指定自訂的 User Model
+AUTH_USER_MODEL = 'user.CustomUser'
+
+# DRF 預設使用 JWT 驗證
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    # Access token 有效期：15 分鐘（短暫，降低外洩風險）
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    # Refresh token 有效期：7 天（換發新 access token 用）
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    # 每次用 refresh token 換發時，同時輪換 refresh token（增加安全性）
+    'ROTATE_REFRESH_TOKENS': True,
+    # 輪換後舊的 refresh token 自動加入黑名單
+    'BLACKLIST_AFTER_ROTATION': True,
+}
