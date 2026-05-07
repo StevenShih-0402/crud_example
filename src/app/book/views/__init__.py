@@ -1,3 +1,3 @@
-from app.book.views.book_view import BookListView, BookDetailView
+from app.book.views.book_view import BookViewSet
 
-__all__ = ["BookListView", "BookDetailView"]
+__all__ = ["BookViewSet"]

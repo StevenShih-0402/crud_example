@@ -9,17 +9,6 @@ class UserService:
     """
 
     @staticmethod
-    def get_all_users():
-        return CustomUser.objects.all().order_by("date_joined")
-
-    @staticmethod
-    def get_user_by_id(user_id: int) -> CustomUser:
-        try:
-            return CustomUser.objects.get(id=user_id)
-        except CustomUser.DoesNotExist:
-            raise ValidationError({"id": f"使用者 ID={user_id} 不存在。"})
-
-    @staticmethod
     def validate_username_unique(username: str, exclude_id: int | None = None):
         qs = CustomUser.objects.filter(username=username)
         if exclude_id is not None:
