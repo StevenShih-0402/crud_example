@@ -25,7 +25,7 @@ SECRET_KEY = "django-insecure-%3&9$7#+0nj6tqxiz7(3=#gsgfq&+eqdhd-og$1p0bqnrnn=n=
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -127,7 +127,7 @@ AUTH_USER_MODEL = "user.CustomUser"
 # DRF 預設使用 JWT 驗證
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "app.user.authentication.BlacklistJWTAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
 }

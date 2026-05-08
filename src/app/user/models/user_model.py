@@ -13,8 +13,6 @@ class CustomUser(AbstractUser):
 
     phone = models.CharField(max_length=20, blank=True, verbose_name="電話")
 
-    objects = models.Manager()
-
     def __str__(self):
         return self.username
 
