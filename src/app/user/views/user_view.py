@@ -1,3 +1,4 @@
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAdminUser
 from rest_framework.viewsets import ModelViewSet
 
@@ -13,6 +14,7 @@ class UserViewSet(ModelViewSet):
 
     queryset = CustomUser.objects.all().order_by("date_joined")
     permission_classes = [IsAdminUser]
+    pagination_class = PageNumberPagination
 
     def get_serializer_class(self):
         if self.action == "create":

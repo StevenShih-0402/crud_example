@@ -1,6 +1,7 @@
 from datetime import datetime, timezone as dt_timezone
 
-from rest_framework import status
+from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
+from rest_framework import serializers, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -13,6 +14,25 @@ from app.user.models.access_token_blacklist_model import AccessTokenBlacklist
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=["auth"],
+        summary="登出",
+        description=(
+            "登出流程：\n"
+            "1. 解析 Authorization header 中的 Access Token，將其 jti 加入自訂的 AccessTokenBlacklist。\n"
+            "2. 若 body 帶有 `refresh`，將該 refresh token 加入 simplejwt 內建黑名單。"
+        ),
+        request=inline_serializer(
+            name="LogoutRequest",
+            fields={
+                "refresh": serializers.CharField(
+                    required=False,
+                    help_text="可選；若提供，會將該 refresh token 加入黑名單。",
+                ),
+            },
+        ),
+        responses={204: OpenApiResponse(description="登出成功，無回傳內容。")},
+    )
     def post(self, request):
         # 將 Access Token 加入黑名單
         auth_header = request.headers.get("Authorization", "")

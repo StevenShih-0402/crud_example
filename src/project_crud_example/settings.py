@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
+    "drf_spectacular",
     "app.book",
     "app.user",
 ]
@@ -130,6 +131,19 @@ REST_FRAMEWORK = {
         "app.user.authentication.BlacklistJWTAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+    # drf-spectacular：產生 OpenAPI schema
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # 全域分頁：list 類 API 一律使用自訂的 StandardPageNumberPagination
+    # （允許 client 用 ?page_size= 覆寫每頁筆數，上限 100）
+    "DEFAULT_PAGINATION_CLASS": "core.pagination.StandardPageNumberPagination",
+}
+
+# drf-spectacular 設定
+SPECTACULAR_SETTINGS = {
+    "TITLE": "CRUD Example API",
+    "DESCRIPTION": "Django + DRF + SimpleJWT CRUD 教學範例 API 文件。",
+    "VERSION": "0.1.0",
+    "SERVE_INCLUDE_SCHEMA": False,
 }
 
 SIMPLE_JWT = {

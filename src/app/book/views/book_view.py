@@ -1,13 +1,16 @@
 from rest_framework.viewsets import ModelViewSet
 
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from app.book.models.book_model import Book
 from app.book.serializers.book_serializer import (
     BookSerializer,
     BookCreateSerializer,
     BookUpdateSerializer,
 )
+from app.book.views.swagger.viewset_schema import BOOK_VIEWSET_SCHEMAS
 
-
+@extend_schema(tags=["書籍 (Book)"])  # Swagger 下拉選單中的標題
+@extend_schema_view(**BOOK_VIEWSET_SCHEMAS)
 class BookViewSet(ModelViewSet):
     """
     書本 CRUD ViewSet。

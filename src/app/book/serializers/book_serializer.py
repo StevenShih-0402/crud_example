@@ -67,10 +67,11 @@ class BookUpdateSerializer(ModelSerializer):
         ]
 
     def validate(self, attrs):
-        BookService.validate_book_name_unique(
-            attrs["book_name"],
-            exclude_id=self.instance.id,
-        )
+        if "book_name" in attrs:
+            BookService.validate_book_name_unique(
+                attrs["book_name"],
+                exclude_id=self.instance.id,
+            )
         return attrs
 
     def update(self, instance, validated_data):
