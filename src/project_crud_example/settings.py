@@ -53,6 +53,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "core.middleware.response_format.CustomResponseMiddleware",
 ]
 
 ROOT_URLCONF = "project_crud_example.urls"
@@ -136,6 +137,8 @@ REST_FRAMEWORK = {
     # 全域分頁：list 類 API 一律使用自訂的 StandardPageNumberPagination
     # （允許 client 用 ?page_size= 覆寫每頁筆數，上限 100）
     "DEFAULT_PAGINATION_CLASS": "core.pagination.StandardPageNumberPagination",
+    # 全域例外處理：統一錯誤回應格式並接住 django.core.exceptions
+    "EXCEPTION_HANDLER": "core.exception.exception_handler.custom_exception_handler",
 }
 
 # drf-spectacular 設定
