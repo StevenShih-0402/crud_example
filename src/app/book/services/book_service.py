@@ -1,7 +1,7 @@
 from django.utils import timezone
-from rest_framework.exceptions import ValidationError
 
 from app.book.models.book_model import Book
+from core.exception.exceptions import DuplicateResourceError, ResourceNotFoundError
 
 
 class BookService:
@@ -27,7 +27,24 @@ class BookService:
         if exclude_id is not None:
             qs = qs.exclude(id=exclude_id)
         if qs.exists():
-            raise ValidationError({"book_name": f"書名「{book_name}」已存在，請使用其他名稱。"})
+            raise DuplicateResourceError(f"書名「{book_name}」已存在，請使用其他名稱。")
+
+    # -------------------------------------------------------------------------
+    # 查詢
+    # -------------------------------------------------------------------------
+
+    @staticmethod
+    def get_book(book_id) -> Book:
+        """依主鍵取得書本。
+
+        以 Book.objects.get() 查詢，攔截 Django 封裝的 Book.DoesNotExist
+        （繼承自 django.core.exceptions.ObjectDoesNotExist），轉拋業務語意的
+        ResourceNotFoundError，最終由 Global Exception Handler 統一處理成 404。
+        """
+        try:
+            return Book.objects.get(id=book_id)
+        except Book.DoesNotExist:
+            raise ResourceNotFoundError(f"查無 id={book_id} 的書本。")
 
     # -------------------------------------------------------------------------
     # CRUD 操作（供 Serializer.create() / update() 呼叫）

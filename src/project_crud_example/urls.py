@@ -11,6 +11,8 @@ from drf_spectacular.views import (
 from rest_framework.authentication import BasicAuthentication
 from rest_framework.permissions import IsAdminUser
 
+from core.exception.views.error_view import unauthorized_view
+
 # 文件頁面共用：Basic Auth + 管理員權限（Django superuser 預設 is_staff=True）
 _DOCS_AUTH = [BasicAuthentication]
 _DOCS_PERM = [IsAdminUser]
@@ -39,4 +41,7 @@ urlpatterns = [
     path('api/schema/', schema_view, name='schema'),
     path('api/schema/swagger-ui/', swagger_view, name='swagger-ui'),
     path('api/schema/redoc/', redoc_view, name='redoc'),
+
+    # 自訂 401 錯誤頁面（可直接存取，亦供 Global Exception Handler 委派）
+    path('error/401/', unauthorized_view, name='unauthorized'),
 ]

@@ -7,6 +7,7 @@ from app.book.serializers.book_serializer import (
     BookCreateSerializer,
     BookUpdateSerializer,
 )
+from app.book.services.book_service import BookService
 from app.book.views.swagger.viewset_schema import BOOK_VIEWSET_SCHEMAS
 
 @extend_schema(tags=["書籍 (Book)"])  # Swagger 下拉選單中的標題
@@ -31,3 +32,10 @@ class BookViewSet(ModelViewSet):
         if self.action in ("update", "partial_update"):
             return BookUpdateSerializer
         return BookSerializer
+
+    def get_object(self):
+        # 改走 Service 層查詢，查無資料由 BookService.get_book 轉拋
+        # ResourceNotFoundError，再由 Global Exception Handler 統一成 404。
+        book = BookService.get_book(self.kwargs[self.lookup_field])
+        self.check_object_permissions(self.request, book)
+        return book

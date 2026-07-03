@@ -8,6 +8,7 @@ from app.user.serializers.user_serializer import (
     UserSerializer,
     UserUpdateSerializer,
 )
+from app.user.services.user_service import UserService
 
 
 class UserViewSet(ModelViewSet):
@@ -22,3 +23,10 @@ class UserViewSet(ModelViewSet):
         if self.action in ("update", "partial_update"):
             return UserUpdateSerializer
         return UserSerializer
+
+    def get_object(self):
+        # 改走 Service 層查詢，查無資料由 UserService.get_user 轉拋
+        # ResourceNotFoundError，再由 Global Exception Handler 統一成 404。
+        user = UserService.get_user(self.kwargs[self.lookup_field])
+        self.check_object_permissions(self.request, user)
+        return user

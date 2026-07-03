@@ -1,6 +1,5 @@
-from rest_framework.exceptions import ValidationError
-
 from app.user.models.user_model import CustomUser
+from core.exception.exceptions import DuplicateResourceError, ResourceNotFoundError
 
 
 class UserService:
@@ -14,7 +13,20 @@ class UserService:
         if exclude_id is not None:
             qs = qs.exclude(id=exclude_id)
         if qs.exists():
-            raise ValidationError({"username": f"使用者名稱「{username}」已被使用。"})
+            raise DuplicateResourceError(f"使用者名稱「{username}」已被使用。")
+
+    @staticmethod
+    def get_user(user_id) -> CustomUser:
+        """依主鍵取得使用者。
+
+        攔截 Django 封裝的 CustomUser.DoesNotExist（繼承自
+        django.core.exceptions.ObjectDoesNotExist），轉拋 ResourceNotFoundError，
+        最終由 Global Exception Handler 統一處理成 404。
+        """
+        try:
+            return CustomUser.objects.get(id=user_id)
+        except CustomUser.DoesNotExist:
+            raise ResourceNotFoundError(f"查無 id={user_id} 的使用者。")
 
     @staticmethod
     def create_user(validated_data: dict) -> CustomUser:

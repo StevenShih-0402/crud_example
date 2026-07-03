@@ -5,6 +5,8 @@ from django.utils.deprecation import MiddlewareMixin
 from rest_framework import status
 from rest_framework.response import Response
 
+from core.exception.response import build_error_message
+
 
 class CustomResponseMiddleware(MiddlewareMixin):
     """
@@ -47,6 +49,12 @@ class CustomResponseMiddleware(MiddlewareMixin):
             return response
 
         is_success = status.is_success(response.status_code)
+
+        # 錯誤內容若已由 Global Exception Handler 包成 {code, msg, data} envelope
+        # （例如 401 / BusinessException 等），直接沿用，避免對 msg 二次拆解造成亂碼
+        if not is_success and isinstance(response.data, dict) and {"code", "msg", "data"}.issubset(response.data.keys()):
+            return JsonResponse(response.data, status=response.status_code, json_dumps_params={"ensure_ascii": False})
+
         body = {"code": response.status_code, "msg": "SUCCESS" if is_success else "FAILURE", "data": {}}
 
         if is_success:
@@ -63,7 +71,10 @@ class CustomResponseMiddleware(MiddlewareMixin):
                 body["data"] = data
             http_status = status.HTTP_200_OK
         else:
-            body["data"], body["msg"] = self._build_error(response.data)
+            # 【安全網】若是沒被 Global Exception Handler 包裝的 error Response
+            # （例如 view 直接 return Response(status=4xx) 而非 raise 例外），
+            # 在這邊會進行包裝，是 ViewSet 層的最後一道防線
+            body["data"], body["msg"] = build_error_message(response.data)
             http_status = response.status_code
 
         return JsonResponse(body, status=http_status, json_dumps_params={"ensure_ascii": False})
@@ -72,20 +83,3 @@ class CustomResponseMiddleware(MiddlewareMixin):
     def _is_paginated(data):
         # 對應 StandardPageNumberPagination.get_paginated_response 的結構
         return isinstance(data, dict) and {"count", "next", "previous", "results"} <= data.keys()
-
-    @staticmethod
-    def _build_error(error_data):
-        # 保留原始 error data，並組出可讀的 msg
-        if isinstance(error_data, dict):
-            if "detail" in error_data:
-                return error_data, str(error_data["detail"])
-            messages = []
-            for field, errors in error_data.items():
-                if isinstance(errors, list):
-                    messages.append(f"{field}: {', '.join(str(e) for e in errors)}")
-                else:
-                    messages.append(f"{field}: {errors}")
-            return error_data, "; ".join(messages) if messages else "請求處理失敗"
-        if isinstance(error_data, list):
-            return error_data, "; ".join(str(item) for item in error_data)
-        return error_data, str(error_data)
