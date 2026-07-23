@@ -9,3 +9,6 @@ wheels/
 # Virtual environments
 .venv
 src/db.sqlite3
+
+# Log files
+src/logs/

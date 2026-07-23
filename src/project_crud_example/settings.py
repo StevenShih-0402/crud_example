@@ -9,8 +9,11 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
-from datetime import timedelta
+import sys
+from datetime import datetime, timedelta
 from pathlib import Path
+
+from colorlog import ColoredFormatter
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -46,6 +49,9 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    # 放在最前面（request 最先經過、response 最後經過），
+    # 讓其後所有 middleware / View / Service 的 log 都能帶到 trace_id
+    "core.middleware.trace_id.TraceIDMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -147,6 +153,125 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Django + DRF + SimpleJWT CRUD 教學範例 API 文件。",
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
+}
+
+# =============================================================================
+# Logging
+# =============================================================================
+# 採 Django 標準的 dictConfig 設定（settings.LOGGING），程式碼端一律使用
+# `logger = logging.getLogger(__name__)`，不自製 log wrapper。
+#
+# 設計重點：
+#   1. trace_id  ：由 TraceIDMiddleware + TraceIDFilter 注入，串起同一次 request 的所有 log。
+#   2. 日期分檔  ：logs/<YYYY-MM-DD>/ 目錄，搭配 TimedRotatingFileHandler 每日午夜換檔、保留 30 天。
+#   3. 彩色輸出  ：console 用 colorlog 依等級上色；落檔用純文字，避免 ANSI 控制碼污染檔案。
+#   4. 分流      ：console 只收 INFO+（畫面乾淨），檔案收 DEBUG+（完整可追查）；
+#                  ERROR+ 另外複寫一份 error.log，出事時不必在 system.log 大海撈針。
+
+# 依「當天日期」建立 log 目錄；伺服器啟動時決定一次即可
+LOG_DIR = BASE_DIR / "logs" / datetime.now().strftime("%Y-%m-%d")
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+# %(trace_id)s 不是 logging 內建欄位，靠 TraceIDFilter 補上；
+# 少了那個 filter 的 handler 會在格式化時噴 KeyError，故兩者必須成對出現。
+LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(name)s | trace_id=%(trace_id)s | %(message)s"
+COLOR_LOG_FORMAT = f"%(log_color)s{LOG_FORMAT}"
+DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+LOGGING = {
+    "version": 1,
+    # False：不關掉此設定未列出的既有 logger（例如第三方套件在 import 時建立的），
+    # 讓它們仍能沿用 root handler
+    "disable_existing_loggers": False,
+    "filters": {
+        "trace_id": {
+            "()": "core.logging_filters.TraceIDFilter",
+        },
+    },
+    "formatters": {
+        # 落檔用：純文字
+        "standard": {
+            "format": LOG_FORMAT,
+            "datefmt": DATE_FORMAT,
+        },
+        # console 用：依等級上色，開發時一眼看出 WARNING / ERROR
+        "colored": {
+            "()": ColoredFormatter,
+            "format": COLOR_LOG_FORMAT,
+            "datefmt": DATE_FORMAT,
+            "log_colors": {
+                "DEBUG": "cyan",
+                "INFO": "green",
+                "WARNING": "black,bg_yellow",
+                "ERROR": "white,bg_red",
+                "CRITICAL": "white,bg_purple",
+            },
+        },
+    },
+    "handlers": {
+        "console": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+            "formatter": "colored",
+            "filters": ["trace_id"],
+            "stream": sys.stdout,
+        },
+        # 系統全量 log：每天午夜換檔，保留 30 份
+        "system_file": {
+            "level": "DEBUG",
+            "class": "logging.handlers.TimedRotatingFileHandler",
+            "filename": LOG_DIR / "system.log",
+            "when": "midnight",
+            "backupCount": 30,
+            "encoding": "utf-8",
+            "formatter": "standard",
+            "filters": ["trace_id"],
+        },
+        # 錯誤專用 log：只收 ERROR 以上
+        "error_file": {
+            "level": "ERROR",
+            "class": "logging.handlers.TimedRotatingFileHandler",
+            "filename": LOG_DIR / "error.log",
+            "when": "midnight",
+            "backupCount": 30,
+            "encoding": "utf-8",
+            "formatter": "standard",
+            "filters": ["trace_id"],
+        },
+    },
+    "loggers": {
+        # Django 框架本身（request 錯誤、DB backend 等）
+        "django": {
+            "handlers": ["console", "system_file", "error_file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        # SQL 查詢語句：需要看 SQL 時再改成 DEBUG，平時關掉避免洗版
+        "django.db.backends": {
+            "handlers": ["system_file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        # 本專案業務程式碼：因為 logger 名稱取自 __name__（如 app.book.services.
+        # book_service），logging 的階層繼承機制會讓所有 app.* 都套用這組設定，
+        # 不必逐一列出每個模組
+        "app": {
+            "handlers": ["console", "system_file", "error_file"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+        # 共用基礎設施（middleware、例外處理等）
+        "core": {
+            "handlers": ["console", "system_file", "error_file"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+    },
+    # 沒對到上面任何 logger 的訊息（第三方套件等）在此兜底
+    "root": {
+        "handlers": ["console", "system_file", "error_file"],
+        "level": "WARNING",
+    },
 }
 
 SIMPLE_JWT = {

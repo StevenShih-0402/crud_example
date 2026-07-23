@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework.viewsets import ModelViewSet
 
 from drf_spectacular.utils import extend_schema, extend_schema_view
@@ -9,6 +11,8 @@ from app.book.serializers.book_serializer import (
 )
 from app.book.services.book_service import BookService
 from app.book.views.swagger.viewset_schema import BOOK_VIEWSET_SCHEMAS
+
+logger = logging.getLogger(__name__)
 
 @extend_schema(tags=["書籍 (Book)"])  # Swagger 下拉選單中的標題
 @extend_schema_view(**BOOK_VIEWSET_SCHEMAS)
@@ -39,3 +43,30 @@ class BookViewSet(ModelViewSet):
         book = BookService.get_book(self.kwargs[self.lookup_field])
         self.check_object_permissions(self.request, book)
         return book
+
+    # -------------------------------------------------------------------------
+    # 寫入類操作的 log
+    #
+    # 覆寫 DRF 提供的 perform_* 掛載點（而非整個 create/update/destroy），
+    # 是在 ViewSet 補記錄的標準做法：只加 log、不動 HTTP 流程。
+    # View 層記錄「誰做了什麼」，Service 層記錄「資料實際變成什麼」，兩者互補。
+    # -------------------------------------------------------------------------
+
+    def perform_create(self, serializer):
+        super().perform_create(serializer)
+        logger.info("使用者 %s 新增書本 book_id=%s", self.request.user, serializer.instance.id)
+
+    def perform_update(self, serializer):
+        super().perform_update(serializer)
+        logger.info("使用者 %s 更新書本 book_id=%s", self.request.user, serializer.instance.id)
+
+    def perform_destroy(self, instance):
+        # 刪除後物件即消失，先把識別資訊留下來再刪
+        book_id, book_name = instance.id, instance.book_name
+        super().perform_destroy(instance)
+        logger.info(
+            "使用者 %s 刪除書本 book_id=%s, book_name=%s",
+            self.request.user,
+            book_id,
+            book_name,
+        )

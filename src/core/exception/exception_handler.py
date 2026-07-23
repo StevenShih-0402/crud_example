@@ -1,3 +1,5 @@
+import logging
+
 from django.core.exceptions import (
     ObjectDoesNotExist,
     PermissionDenied as DjangoPermissionDenied,
@@ -16,6 +18,8 @@ from core.enum.error_enum import ErrorEnum
 from core.exception.exceptions import BusinessException
 from core.exception.response import build_error_envelope
 from core.exception.views.error_view import build_unauthorized_envelope
+
+logger = logging.getLogger(__name__)
 
 
 def _translate_django_exception(exc):
@@ -53,6 +57,11 @@ def custom_exception_handler(exc, context):
 
     # 未被 DRF 接住（例如原生 Python 例外）→ 500 兜底，避免裸露堆疊
     if response is None:
+        # 本 handler 一律回傳 Response，DRF 便不會再往上拋，
+        # Django 內建的 django.request logger 也就看不到這個例外。
+        # 若這裡不記錄，真正的系統錯誤會完全靜默、連堆疊都不留。
+        # logger.exception 等同 logger.error(..., exc_info=True)，會附上完整 traceback。
+        logger.exception("未預期的例外，回傳 500：view=%s", context.get("view"))
         envelope = build_error_envelope(
             ErrorEnum.SERVER_ERROR.name,
             {"detail": ErrorEnum.SERVER_ERROR.value},

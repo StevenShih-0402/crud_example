@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAdminUser
 from rest_framework.viewsets import ModelViewSet
@@ -9,6 +11,8 @@ from app.user.serializers.user_serializer import (
     UserUpdateSerializer,
 )
 from app.user.services.user_service import UserService
+
+logger = logging.getLogger(__name__)
 
 
 class UserViewSet(ModelViewSet):
@@ -30,3 +34,29 @@ class UserViewSet(ModelViewSet):
         user = UserService.get_user(self.kwargs[self.lookup_field])
         self.check_object_permissions(self.request, user)
         return user
+
+    # -------------------------------------------------------------------------
+    # 寫入類操作的 log
+    #
+    # 帳號異動屬敏感操作，一律記錄「哪個管理員動了哪個帳號」，
+    # 以 DRF 的 perform_* 掛載點實作，不改動原本的 HTTP 流程。
+    # -------------------------------------------------------------------------
+
+    def perform_create(self, serializer):
+        super().perform_create(serializer)
+        logger.info("管理員 %s 新增使用者 user_id=%s", self.request.user, serializer.instance.id)
+
+    def perform_update(self, serializer):
+        super().perform_update(serializer)
+        logger.info("管理員 %s 更新使用者 user_id=%s", self.request.user, serializer.instance.id)
+
+    def perform_destroy(self, instance):
+        # 刪除後物件即消失，先把識別資訊留下來再刪
+        user_id, username = instance.id, instance.username
+        super().perform_destroy(instance)
+        logger.info(
+            "管理員 %s 刪除使用者 user_id=%s, username=%s",
+            self.request.user,
+            user_id,
+            username,
+        )
