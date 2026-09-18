@@ -11,3 +11,31 @@ dependencies = [
     "djangorestframework-simplejwt>=5.5.1",
     "drf-spectacular>=0.29.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "pytest-django>=4.14.0",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "project_crud_example.settings"
+pythonpath = ["src"]
+testpaths = ["src/tests"]
+python_files = ["test_*.py"]
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+omit = [
+    "src/tests/*",
+    "src/manage.py",
+    "src/*/migrations/*",
+    "src/project_crud_example/asgi.py",
+    "src/project_crud_example/wsgi.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
