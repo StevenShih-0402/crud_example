@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime, timezone as dt_timezone
 
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import serializers, status
@@ -9,7 +8,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
-from app.user.models.access_token_blacklist_model import AccessTokenBlacklist
+from app.user.services.token_blacklist_service import TokenBlacklistService
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +21,7 @@ class LogoutView(APIView):
         summary="登出",
         description=(
             "登出流程：\n"
-            "1. 解析 Authorization header 中的 Access Token，將其 jti 加入自訂的 AccessTokenBlacklist。\n"
+            "1. 解析 Authorization header 中的 Access Token，將其 jti 加入 Redis 黑名單（TTL 為 token 剩餘有效秒數）。\n"
             "2. 若 body 帶有 `refresh`，將該 refresh token 加入 simplejwt 內建黑名單。"
         ),
         request=inline_serializer(
@@ -43,8 +42,7 @@ class LogoutView(APIView):
             raw_access_token = auth_header.split(" ")[1]
             access_token = AccessToken(raw_access_token)
             jti = access_token["jti"]
-            expires_at = datetime.fromtimestamp(access_token["exp"], tz=dt_timezone.utc)
-            AccessTokenBlacklist.objects.get_or_create(jti=jti, defaults={"expires_at": expires_at})
+            TokenBlacklistService.add(jti, access_token["exp"])
             # 只記錄 jti（token 的識別碼），絕不記錄 token 本身
             logger.info("Access Token 已加入黑名單：user=%s, jti=%s", request.user, jti)
 

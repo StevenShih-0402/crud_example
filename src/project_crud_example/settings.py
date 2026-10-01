@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
+import os
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -284,3 +285,10 @@ SIMPLE_JWT = {
     # 輪換後舊的 refresh token 自動加入黑名單
     "BLACKLIST_AFTER_ROTATION": True,
 }
+
+# =============================================================================
+# Redis
+# =============================================================================
+# 目前用於存放 Access Token 黑名單（見 app.user.services.token_blacklist_service）。
+# 可用環境變數 REDIS_URL 覆寫，格式：redis://[:password@]host:port/db
+REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
