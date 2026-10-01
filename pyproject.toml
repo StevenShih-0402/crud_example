@@ -7,10 +7,10 @@ requires-python = ">=3.12"
 dependencies = [
     "colorlog>=6.11.0",
     "django>=6.0.3",
+    "django-redis>=7.0.0",
     "djangorestframework>=3.17.1",
     "djangorestframework-simplejwt>=5.5.1",
     "drf-spectacular>=0.29.0",
-    "redis>=8.1.0",
 ]
 
 [dependency-groups]

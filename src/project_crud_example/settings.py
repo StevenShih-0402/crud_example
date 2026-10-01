@@ -289,6 +289,17 @@ SIMPLE_JWT = {
 # =============================================================================
 # Redis
 # =============================================================================
+# 透過 django-redis 把 Redis 當作 Django 的 cache backend，程式中統一用 django.core.cache 存取。
 # 目前用於存放 Access Token 黑名單（見 app.user.services.token_blacklist_service）。
 # 可用環境變數 REDIS_URL 覆寫，格式：redis://[:password@]host:port/db
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    }
+}
